@@ -1,6 +1,9 @@
 package com.mra
 
+import com.mra.RouteConstance.SINGLE_ORDER_ROUTE
+import com.mra.RouteConstance.TOTAL_ORDER_ROUTE
 import com.mra.models.Customer
+import com.mra.models.orderStorage
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -23,9 +26,9 @@ fun Route.customerRouting() {
 
         post {
             val customer = call.receive<Customer>()
-            if(null != customerStorage.find { it.id == customer.id })
+            if (null != customerStorage.find { it.id == customer.id })
                 call.respondText("This user has exist", status = HttpStatusCode.Conflict)
-            
+
             customerStorage.add(customer)
             call.respondText("Customer stored correctly", status = HttpStatusCode.Created)
         }
@@ -38,5 +41,38 @@ fun Route.customerRouting() {
                 call.respondText("Not Found", status = HttpStatusCode.NotFound)
             }
         }
+    }
+}
+
+
+fun Route.listOrderRoute() {
+    route(RouteConstance.ORDERS_ROUTE) {
+        get {
+            if (orderStorage.isNotEmpty()) call.respond(orderStorage)
+            else call.respondText("No order yet", status = HttpStatusCode.OK)
+        }
+    }
+}
+
+fun Route.getOrderRute() {
+    get(SINGLE_ORDER_ROUTE) {
+        val id = call.parameters["id"] ?: return@get call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
+        val order = orderStorage.find { it.number == id } ?: return@get call.respondText(
+            "Not Found",
+            status = HttpStatusCode.NotFound
+        )
+        call.respond(order)
+    }
+}
+
+fun Route.totalizeOrderRoute() {
+    get(TOTAL_ORDER_ROUTE) {
+        val id = call.parameters["id"] ?: return@get call.respondText("Bad Request", status = HttpStatusCode.BadRequest)
+        val order = orderStorage.find { it.number == id } ?: return@get call.respondText(
+            "Not Found",
+            status = HttpStatusCode.NotFound
+        )
+        val total = order.contents.sumOf { it.price * it.amount }
+        call.respond(total)
     }
 }
